@@ -65,6 +65,24 @@ Resources:
           apt-get update -y
           sudo apt-get install nginx -y
           service nginx start
+
+          WEB_DIR="/var/www/html"
+
+          cat <<EOF > index.html
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>It works! Udagram, Udacity</title>
+          </head>
+          <body>
+              <hl>It works! Udagram, Udacity</hl>
+              <p>This website is hosted on Nginx.</p>
+          </body>
+          </html>
+          EOF
+          sudo rm -r $WEB_DIR/index.*
+          sudo cp index.html $WEB_DIR
+          sudo systemctl reload nginx
         ImageId: !Ref IDAMI
         SecurityGroupIds:
           - !Ref WebServerSecGroup

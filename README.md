@@ -38,7 +38,7 @@ After both processes completed, the interface will be generated, as it can be se
 ![Image Alt text](/cloudformation-stacks.png "Created Stacks")
 
 ## Acces of the DNS
-DNS: 
+DNS: http://udacit-webap-kwepytwia7ws-2010095406.us-east-1.elb.amazonaws.com/
 ![Image Alt text](/dns-link.png "DNS Acess")
 
 *Note that few parameters can be changed in the .json files*
