@@ -5,19 +5,22 @@ Parameters:
     Description: A project name that will be prefixed to resource names
     Type: String
 
-# Resources:
-#   # Add your resources here
-#   # We include a portion of the LaunchTemplate resource so you can use the UserData.
-#   WebAppLaunchTemplate:
-#     Type: AWS::EC2::LaunchTemplate
-#     Properties: 
-#       LaunchTemplateData:
-#         UserData:
-#           Fn::Base64: |
-#             #!/bin/bash
-#             apt-get update -y
-#             sudo apt-get install nginx -y
-#             service nginx start
+  IDAMI:
+    Description: Id from AMI considering the image used
+    Type: String
+
+  EBSSize:
+    Description: Size in Gigabytes from EBS
+    Type: String
+
+  EC2Type:
+    Description: Type of EC2 used
+    Type: String
+    Default: t2.micro
+
+  BucketName:
+    Description: Name of the bucket that will be used
+    Type: String
 
 Resources:
   LBSecGroup:
@@ -55,28 +58,29 @@ Resources:
     Type: AWS::EC2::LaunchTemplate
     DependsOn: WebAppInstanceProfile
     Properties: 
-      LaunchTemplateName: !Sub "${ProjectName}-web-servers"
+      LaunchTemplateName: !Sub "${ProjectName}-web"
       LaunchTemplateData:
         UserData: !Base64 |
           #!/bin/bash
           apt-get update -y
           sudo apt-get install nginx -y
           service nginx start
-        ImageId: ami-0557a15b87f6559cf
+        ImageId: !Ref IDAMI
         SecurityGroupIds:
           - !Ref WebServerSecGroup
         InstanceType: t2.micro
         BlockDeviceMappings:
         - DeviceName: "/dev/sdk"
           Ebs:
-            VolumeSize: '50'
+            VolumeSize: !Ref EBSSize
         IamInstanceProfile:
           Name: !Ref WebAppInstanceProfile
 
   WebAppInstanceRole:
     Type: AWS::IAM::Role
+    DependsOn: S3Bucket
     Properties:
-      RoleName: !Sub "${ProjectName}-web-servers-1"
+      RoleName: !Sub "${ProjectName}-web"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -87,14 +91,15 @@ Resources:
           Action:
           - 'sts:AssumeRole'
       Policies:
-        - PolicyName: AccessAllS3Buckets
+        - PolicyName: AccessS3Buckets
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
             - Effect: Allow
               Action:
               - 's3:GetObject'
-              Resource: "arn:aws:s3:::*/*"
+              - 's3:PutObject'
+              Resource: !Sub "arn:aws:s3:::{$BucketName}/*"
 
   WebAppInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -102,6 +107,35 @@ Resources:
       Path: '/'
       Roles:
         - !Ref WebAppInstanceRole
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: ObjectWriter
+
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: S3Bucket
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowPublicReadAccess"
+            Effect: "Allow"
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
 
   WebAppGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -165,3 +199,11 @@ Resources:
       VpcId: 
         Fn::ImportValue:
           Fn::Sub: "${ProjectName}-VPCID"
+
+Outputs:
+
+  DNSWebApp: 
+    Description: A reference to the DNS that it was created
+    Value: !Sub "http://${WebAppLB.DNSName}"
+    Export:
+      Name: !Sub "${ProjectName}-DNS"

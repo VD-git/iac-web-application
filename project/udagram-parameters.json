@@ -2,5 +2,21 @@
 	{
 		"ParameterKey": "ProjectName",
 		"ParameterValue": "udacity-network"
+	},
+	{
+		"ParameterKey": "IDAMI",
+		"ParameterValue": "ami-0c7217cdde317cfec"
+	},
+	{
+		"ParameterKey": "EBSSize",
+		"ParameterValue": "50"
+	},
+	{
+		"ParameterKey": "EC2Type",
+		"ParameterValue": "t2.micro"
+	},
+	{
+		"ParameterKey": "BucketName",
+		"ParameterValue": "any-random-bucket-name-4231"
 	}
 ]
